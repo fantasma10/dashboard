@@ -1,0 +1,512 @@
+ <!DOCTYPE html>
+ <html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js"></script>
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <!-- <script src="./myChart.js"></script> -->
+
+  <script src="papaparse.min.js"></script>
+  <title>Dashboard</title>
+  <style>
+	.pdfobject-container { height: 500px;}
+	.pdfobject { border: 1px solid #666; }
+
+	.container {
+        width: 50%;
+        height: 50%;
+    }
+
+	.parent {
+	  overflow: auto;
+	  padding-top: 50px;
+	  text-align: center;
+
+	}
+
+	.parent>div {
+	  float: left;
+	  width: 45%;
+	  
+	}    
+
+	.borde{
+		border: 2px solid red;
+  		border-radius: 5px;
+  		padding-left: 30px;
+	}
+	.groove{
+	  border-style:groove; 
+	}
+
+	* {
+	  box-sizing: border-box;
+	}
+
+	body {
+	  font-family: Arial, Helvetica, sans-serif;
+	}
+
+	/* Float four columns side by side */
+	.column {
+	  float: left;
+	  width: 25%;
+	  padding: 0 10px;
+	  padding-top: 50px;
+	}
+
+	/* Remove extra left and right margins, due to padding in columns */
+	.row {margin: 0 -5px;}
+
+	/* Clear floats after the columns */
+	.row:after {
+	  content: "";
+	  display: table;
+	  clear: both;
+	}
+
+	/* Style the counter cards */
+	.card {
+	  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2); /* this adds the "card" effect */
+	  padding: 16px;
+	  text-align: center;
+	  background-color: #f1f1f1;
+	}
+
+	/* Responsive columns - one column layout (vertical) on small screens */
+	@media screen and (max-width: 600px) {
+	  .column {
+	    width: 100%;
+	    display: block;
+	    margin-bottom: 20px;
+	  }
+	}
+	
+  </style>
+</head>
+<body>
+  <div >
+	<div class="well">
+		<div class="row">
+		<form class="form-inline">
+			<div class="form-group">
+			  <label for="files">Seleccione su archivo CSV:</label>
+			  <input type="file" id="files"  class="form-control" accept=".csv" required />
+			</div>
+			<div class="form-group">
+			 <button type="submit" id="submit-file" class="btn btn-primary">Subir</button>
+			 </div>
+		</form>
+		</div>
+
+
+		<div class="row">
+		  <div class="column">
+		    <div class="card">
+		    	<h3>Total de llamadas contestadas</h3>	
+		    	<h3 id="t1">0</h3>
+		    </div>
+		  </div>
+		  <div class="column">
+		    <div class="card">
+		    	<h3>Total de llamadas no contestadas</h3>	
+		    	<h3 id="t2" >0</h3>
+		    </div>
+		  </div>
+		  <div class="column">
+		    <div class="card">
+		    	<h3> Total de llamadas erroneas </h3>	
+		    	<h3 id="t3" >0</h3>
+
+		    </div>
+		  </div>
+		</div>
+
+
+		<div class="parent">
+		  <div class="left"><canvas id="ChartSemana" width="300" height="200"> </canvas></div>
+		  <div class="center"><canvas id="ChartRespuestas" width="300" height="200"></canvas></div>
+		</div>
+
+		<div class="parent">
+		  <div class="left"> <canvas id="ChartSemanaHoras" width="300" height="200"></canvas> </canvas></div>
+		  <div class="center"> <canvas id="ChartSemanaHorasRespuestas" width="300" height="200"> </canvas> </canvas></div>
+		</div>
+
+
+		<div class="parent">
+		  <div class="left"> <canvas id="ChartRespuestasPie" width="300" height="200"></canvas>  </canvas></div>
+		</div>
+
+	
+  </div>
+</body>
+</html>
+<script type="text/javascript">
+	var ArrayFecha = [];
+	var ArrayHoras = [];
+	let respuestasMap = [[]]
+	let respuestasMapHoras = [[]]
+	var result = [[],[]];
+
+  $(document).ready(function(){
+    $('#submit-file').on("click",function(e){
+		e.preventDefault();
+		$('#files').parse({
+			config: {
+				delimiter: "auto",
+				complete: displayHTMLTable,
+			},
+			before: function(file, inputElem)
+			{
+				//console.log("Parsing file...", file);
+			},
+			error: function(err, file)
+			{
+				//console.log("ERROR:", err, file);
+			},
+			complete: function()
+			{
+				//console.log("Done with all files");
+			}
+		});
+    });
+	
+	function displayHTMLTable(results){
+		var table = "<table class='table'>";
+		var data = results.data;
+
+		 
+		for(i=0;i<data.length;i++){
+
+			
+			// console.log(data.length);
+			if (i > 1)  {
+				// console.log("Done..", i);
+				table+= "<tr>";
+				var row = data[i];
+				var cells = row.join(",").split(",");
+				 
+				for(j=0;j<cells.length;j++){
+					if ( j == 0 || j == 1 )  {						
+						table+= "<td>";
+						if (j==0 ){
+							table+= cells[j].substring(0,8);
+							// console.log(cells[j].substring(0,8));
+							ArrayFecha.push( cells[j].substring(0,8) );
+							ArrayHoras.push( cells[j].substring(9,11) );
+							respuestasMap.push( [cells[j].substring(0,8), cells[11] ] );
+
+							respuestasMapHoras.push( [cells[j].substring(9,11), cells[11] ] );
+
+							// console.log("--------------------");
+							// console.log(cells[j].substring(0,8), cells[11]);
+						} else {
+							table+= cells[j];
+						}
+						table+= "</th>";
+					}
+				}
+				table+= "</tr>";
+			} else {
+				// console.log(" NOOOO Done..", i);
+			}
+		}
+		result = foo(ArrayFecha);
+		var countRespuestas = resLlamada(respuestasMap, result[0]);
+		// console.log(countRespuestas);
+		renderChart(result[1], result[0]);
+		renderChartRespuestas(countRespuestas, result[0]);
+
+		console.log(data[0][0]);
+		console.log(data[1][0]);
+		var suma1 = parseInt(countRespuestas[0][0]) + parseInt(countRespuestas[1][0]);
+		var suma2 = parseInt(countRespuestas[0][1]) + parseInt(countRespuestas[1][1]);
+		var suma3 = parseInt(countRespuestas[0][2]) + parseInt(countRespuestas[1][2]);
+		document.getElementById("t1").innerHTML =  suma1 ;
+		document.getElementById("t2").innerHTML =  suma2 ;
+		document.getElementById("t3").innerHTML =  suma3 ;
+
+
+		renderChartRespuestasPie(result[1], result[0]);
+
+		//Horas de trabajo
+		result = foo(ArrayHoras);
+		renderChartHoras(result[1], result[0]);
+
+		//Compración de respuestas por hora
+		var countRespuestas = resLlamadaHoras(respuestasMapHoras, result[0]);
+		renderChartHorasRespuesta(countRespuestas[0],countRespuestas[1], countRespuestas[2], result[0],result[1]);
+
+		table+= "</table>";
+		// $("#parsed_csv_list").html(table);
+	}
+  });
+
+
+function resLlamadaHoras(kvArray, labelFecha){
+	var resultCoutS = [];
+	var resultCoutN = [];
+	var resultCoutF = [];
+	var labecount = "";
+	var totalcountRS = 0;
+	var totalcountRN = 0;
+	var totalcountRF = 0;
+	// console.log(labelFecha);
+	// console.log(kvArray);
+	for(var il=0; il<labelFecha.length; il++) {
+		labecount = labelFecha[il];
+		totalcountRS = 0;
+		totalcountRN = 0;
+		totalcountRF = 0;
+
+		for(var i=0; i<kvArray.length; i++) {
+		    if (kvArray[i][0] == labecount) {
+		    	if (kvArray[i][1] == "ANSWERED"){
+		    		totalcountRS += 1;
+		    	} else if (kvArray[i][1] == "NO ANSWER"){
+		    		totalcountRN += 1;
+		    	} else if (kvArray[i][1] == "FAILED"){
+		    		totalcountRF += 1;
+		    	}
+		    } 
+		}
+		resultCoutS.push( totalcountRS);
+		resultCoutN.push( totalcountRN);
+		resultCoutF.push( totalcountRF);
+	}
+
+	return [resultCoutS,resultCoutN,resultCoutF];
+}
+
+function resLlamada(kvArray, labelFecha){
+	var resultCout = [];
+	var labecount = "";
+	var totalcountRS = 0;
+	var totalcountRN = 0;
+	var totalcountRF = 0;
+	// console.log(labelFecha);
+	// console.log(kvArray);
+	for(var il=0; il<labelFecha.length; il++) {
+		labecount = labelFecha[il];
+		for(var i=0; i<kvArray.length; i++) {
+		    if (kvArray[i][0] == labecount) {
+		    	if (kvArray[i][1] == "ANSWERED"){
+		    		totalcountRS += 1;
+		    	} else if (kvArray[i][1] == "NO ANSWER"){
+		    		totalcountRN += 1;
+		    	} else if (kvArray[i][1] == "FAILED"){
+		    		totalcountRF += 1;
+		    	}
+		    } 
+		}
+		resultCout.push( [totalcountRS,totalcountRN,totalcountRF]);
+	}
+
+	return resultCout;
+}
+
+
+
+var groupBy = function(xs, key) {
+  return xs.reduce(function(rv, x) {
+    (rv[x[key]] = rv[x[key]] || []).push(x);
+    return rv;
+  }, {});
+};
+
+
+function foo(arr) {
+    var a = [], b = [], prev;
+    
+    arr.sort();
+    for ( var i = 0; i < arr.length; i++ ) {
+        if ( arr[i] !== prev ) {
+            a.push(arr[i]);
+            b.push(1);
+        } else {
+            b[b.length-1]++;
+        }
+        prev = arr[i];
+    }
+    
+    return [a, b];
+}
+
+
+
+function renderChart(data, labels) {
+    var ctx = document.getElementById("ChartSemana").getContext('2d');
+    var myChart = new Chart(ctx, {
+	    type: 'bar',
+	    data: {
+	      labels: labels,
+	      datasets: [
+	        {
+	          label: "Llamadas por día",
+	          backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850"],
+	          data: data
+	        }
+	      ]
+	    },
+	    options: {
+	      legend: { display: false },
+	      title: {
+	        display: true,
+	        text: 'Llamadas recibidas en la semana',
+	        fontSize: 20,
+	        padding: 20
+	      }
+	    }
+    });
+}
+
+
+function renderChartRespuestas(data, labels) {
+    var ctx = document.getElementById("ChartRespuestas").getContext('2d');
+    var myChart = new Chart(ctx, {
+
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "ANSWERED",
+          backgroundColor: "#008B02",
+          data: [data[0][0], data[1][0]]
+        }, {
+          label: "NO ANSWER",
+          backgroundColor: "#004DCF",
+          data: [data[0][1], data[1][1]]
+        }, {
+          label: "FAILED",
+          backgroundColor: "#B80000",
+          data: [data[0][2], data[1][2]]
+        }
+
+      ]
+    },
+    options: {
+      title: {
+        display: true,
+        text: 'Tablero de llamadas atendidas por fecha',
+        fontSize: 20,
+	    padding: 20
+      }
+    }
+
+    });
+}
+
+
+function renderChartRespuestasPie(data, labels) {
+    var ctx = document.getElementById("ChartRespuestasPie").getContext('2d');
+    var myChart = new Chart(ctx, {
+
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "Llamadas",
+          backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850"],
+          data: data
+        }
+      ]
+    },
+    options: {
+      title: {
+        display: true,
+        text: 'Comparación de llamadas pordía',
+        fontSize: 20,
+	    padding: 20        
+      }
+    }
+
+    });
+}
+
+
+
+function renderChartHoras(data, labels) {
+    var ctx = document.getElementById("ChartSemanaHoras").getContext('2d');
+    var myChart = new Chart(ctx, {
+	    type: 'bar',
+	    data: {
+	      labels: labels,
+	      datasets: [
+	       {
+	          label: "Evolución",
+	          type: "line",
+	          borderColor: "#8e5ea2",
+	          data: data,
+	          fill: false
+	        }, {
+	          label: "Llamadas por hora",
+	          // backgroundColor: ["#3e95cd", "#8e5ea2","#3cba9f","#e8c3b9","#c45850"],
+	          data: data
+	        }
+	      ]
+	    },
+	    options: {
+	      legend: { display: false },
+	      title: {
+	        display: true,
+	        text: 'Llamadas recibidas por hora en la semana',
+        	fontSize: 20,
+	    	padding: 20	        
+	      }
+	    }
+    });
+}
+
+
+function renderChartHorasRespuesta(dataS,dataN, dataF, labels, dataTotal) {
+    var ctx = document.getElementById("ChartSemanaHorasRespuestas").getContext('2d');
+    var myChart = new Chart(ctx, {
+
+
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "ANSWERED",
+          type: "line",
+          borderColor: "#008B02",
+          fill: false,
+          data: dataS
+        }, {
+          label: "NO ANSWER",
+          type: "line",
+          borderColor: "#004DCF",
+          fill: false,
+          data: dataN,
+        }, {
+          label: "FAILED",
+          type: "line",
+          borderColor: "#B80000",
+          fill: false,
+          data: dataF
+	    }, {
+	          label: "Total de llamadas",
+	          data: dataTotal
+	     }
+
+      ]
+    },
+    options: {
+      title: {
+        display: true,
+        text: 'Tablero de llamadas atendidas por hora',
+        fontSize: 20,
+	    padding: 20        
+      }
+    }
+
+    });
+}
+
+
+</script>
